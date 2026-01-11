@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Operation Athena</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=VT323&family=Inter:wght@400;700&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #000000;
+      color: #e5e7eb;
+      line-height: 1.5;
+    }
+
+    .section-title {
+      font-family: 'VT323', monospace;
+      font-size: 1.8rem;
+      color: #f39c12;
+      margin-bottom: 0.75rem;
+    }
+
+    .panel {
+      background-color: #2c313c;
+      border: 1px solid #3f4856;
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+    }
+
+    textarea, input {
+      background-color: #1f242d;
+      border: 1px solid #3f4856;
+      border-radius: 0.5rem;
+      padding: 1.75rem;
+      width: 100%;
+      color: #e5e7eb;
+      font-size: 0.95rem;
+    }
+
+    textarea:focus, input:focus {
+      outline: none;
+      border-color: #f39c12;
+    }
+
+    .btn {
+      border-radius: 0.5rem;
+      font-weight: 600;
+      padding: 0.65rem 1rem;
+      transition: background-color 0.2s ease, transform 0.1s ease;
+      font-family: "Courier New", monospace;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn-primary {
+      background-color: #f39c12;
+      color: #000;
+    }
+
+    .btn-primary:hover {
+      background-color: #d9820f;
+    }
+
+    .btn-danger {
+      background-color: #e74c3c;
+      color: #fff;
+    }
+
+    .btn-danger:hover {
+      background-color: #c0392b;
+    }
+
+    .modal {
+      background-color: rgba(0, 0, 0, 0.6);
+      z-index: 100;
+    }
+
+    .modal-content {
+      background-color: #2c313c;
+      border: 1px solid #3f4856;
+      font-family: "Courier New", monospace;
+    }
+
+    /* Compact grid layout */
+    .grid-layout {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+      gap: 1.25rem;
+    }
+
+    header h1 {
+      font-family: 'VT323', monospace;
+      font-size: 3rem;
+      color: #f39c12;
+    }
+
+    header p {
+      color: #9ca3af;
+      font-size: 0.95rem;
+    }
+  </style>
+</head>
+<body class="p-6 md:p-10">
+  <div class="container mx-auto max-w-[1300px]">
+    <header class="text-center mb-10">
+      <h1 class="section-title text-5xl">Project Whisper</h1>
+      <p>Secure transmission and interception protocols active.</p>
+    </header>
+
+    <!-- Grid Sections -->
+    <div class="grid-layout">
+      <!-- Settings -->
+      <div class="panel">
+        <h2 class="section-title">Backend Settings</h2>
+        <p class="text-sm text-gray-400 mb-4">System configuration panel.</p>
+        <label for="backendIP" class="block font-semibold mb-2">Backend IP Address:</label>
+        <input id="backendIP" type="text" placeholder="Enter IP" value="172.20.10.5">
+        <button id="saveSettingsBtn" class="btn btn-primary w-full mt-4">Save Settings</button>
+      </div>
+
+      <!-- Encrypt -->
+      <div class="panel">
+        <h2 class="section-title">Transmit Encrypted Message</h2>
+        <label for="messageInput" class="block font-semibold mb-2">Message to Encrypt:</label>
+        <textarea id="messageInput" rows="3"></textarea>
+        <button id="encryptBtn" class="btn btn-primary w-full mt-4">Encrypt & Transmit</button>
+        <div id="encryptStatus" class="p-3 rounded-md text-sm text-center font-bold mt-3 hidden"></div>
+        <label for="encryptedOutput" class="block font-semibold mt-4">Encrypted Transmission:</label>
+        <textarea id="encryptedOutput" rows="3" readonly class="cursor-pointer select-all"></textarea>
+      </div>
+
+      <!-- Decrypt -->
+      <div class="panel">
+        <h2 class="section-title">Receive & Decode Message</h2>
+        <label for="messageReceived" class="block font-semibold mb-2">Received Message:</label>
+        <textarea id="messageReceived" rows="3"></textarea>
+        <button id="decryptBtn" class="btn btn-primary w-full mt-4">Decode</button>
+        <div id="decryptStatus" class="p-3 rounded-md text-sm text-center font-bold mt-3 hidden"></div>
+        <label for="decodedOutput" class="block font-semibold mt-4">Decoded Message:</label>
+        <textarea id="decodedOutput" rows="3" readonly></textarea>
+      </div>
+
+      <!-- Intercept -->
+      <div class="panel">
+        <h2 class="section-title">Intercept Enemy Transmission</h2>
+        <label for="interceptedMessage" class="block font-semibold mb-2">Intercepted Message:</label>
+        <textarea id="interceptedMessage" rows="3"></textarea>
+        <button id="interceptBtn" class="btn btn-danger w-full mt-4">Analyze Transmission</button>
+        <div id="interceptStatus" class="p-3 rounded-md text-sm text-center font-bold mt-3 hidden"></div>
+        <label for="enigmaOutput" class="block font-semibold mt-4">Declassified Enigma Output:</label>
+        <textarea id="enigmaOutput" rows="3" readonly></textarea>
+      </div>
+
+      <!-- Messaging -->
+      <div class="panel col-span-2">
+        <h2 class="section-title">Real-Time Messaging</h2>
+        <label for="chatMessage" class="block font-semibold mb-2">Message to Send:</label>
+        <textarea id="chatMessage" rows="2"></textarea>
+        <button id="sendMessageBtn" class="btn btn-primary w-full mt-4">Send Message</button>
+        <label for="incomingMessages" class="block font-semibold mt-4">Incoming Messages:</label>
+        <textarea id="incomingMessages" rows="5" readonly class="bg-gray-700"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirmation Modal -->
+  <div id="confirmationModal" class="modal fixed inset-0 flex items-center justify-center p-4 hidden">
+    <div class="modal-content rounded-xl p-8 shadow-2xl w-full max-w-sm text-center border border-gray-700">
+      <p id="modalMessage" class="text-lg font-semibold mb-6"></p>
+      <div class="flex justify-center space-x-4">
+        <button id="confirmSendBtn" class="btn btn-primary">Send Anyway</button>
+        <button id="cancelSendBtn" class="btn btn-danger">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- UI Elements ---
+            const messageInput = document.getElementById('messageInput');
+            const encryptBtn = document.getElementById('encryptBtn');
+            const encryptedOutput = document.getElementById('encryptedOutput');
+            const encryptStatus = document.getElementById('encryptStatus');
+
+            const messageReceived = document.getElementById('messageReceived');
+            const decryptBtn = document.getElementById('decryptBtn');
+            const decodedOutput = document.getElementById('decodedOutput');
+            const decryptStatus = document.getElementById('decryptStatus');
+
+            const interceptedMessage = document.getElementById('interceptedMessage');
+            const interceptBtn = document.getElementById('interceptBtn');
+            const enigmaOutput = document.getElementById('enigmaOutput');
+            const interceptStatus = document.getElementById('interceptStatus');
+
+            // Modal elements
+            const confirmationModal = document.getElementById('confirmationModal');
+            const modalMessage = document.getElementById('modalMessage');
+            const confirmSendBtn = document.getElementById('confirmSendBtn');
+            const cancelSendBtn = document.getElementById('cancelSendBtn');
+
+            // Settings elements
+            const backendIP = document.getElementById('backendIP');
+            const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+
+            // Real-time messaging elements
+            const chatMessage = document.getElementById('chatMessage');
+            const sendMessageBtn = document.getElementById('sendMessageBtn');
+            const incomingMessages = document.getElementById('incomingMessages');
+
+            // --- Backend URL Configuration ---
+            let backendURL = 'http://localhost:3000';
+            let ws;
+
+            saveSettingsBtn.addEventListener('click', () => {
+                const ip = backendIP.value.trim();
+                if (ip) {
+                    backendURL = `http://${ip}:3000`;
+                    // Update WebSocket connection
+                    if (ws) ws.close();
+                    ws = new WebSocket(`ws://${ip}:3001`);
+                    ws.onopen = () => console.log('WebSocket connected');
+                    ws.onmessage = (event) => {
+                        incomingMessages.value += `[${new Date().toLocaleTimeString()}] ${event.data}\n`;
+                        incomingMessages.scrollTop = incomingMessages.scrollHeight;
+                    };
+                    ws.onclose = () => console.log('WebSocket disconnected');
+                    alert(`Backend URL updated to ${backendURL}`);
+                } else {
+                    alert('Please enter a valid IP address.');
+                }
+            });
+
+            // Initialize WebSocket
+            ws = new WebSocket('ws://localhost:3001');
+            ws.onopen = () => console.log('WebSocket connected');
+            ws.onmessage = (event) => {
+                incomingMessages.value += `[${new Date().toLocaleTimeString()}] ${event.data}\n`;
+                incomingMessages.scrollTop = incomingMessages.scrollHeight;
+            };
+            ws.onclose = () => console.log('WebSocket disconnected');
+
+            //  Encryption Algorithms
+            const encryptionMethods = {
+                //  substitution cipher
+                encA: {
+                    encrypt: (msg) => msg.split('').map(char => String.fromCharCode(char.charCodeAt(0) + 1)).join(''),
+                    decrypt: (msg) => msg.split('').map(char => String.fromCharCode(char.charCodeAt(0) - 1)).join('')
+                },
+                // Caesar cipher with a key of 3
+                encB: {
+                    encrypt: (msg) => msg.split('').map(char => {
+                        const code = char.charCodeAt(0);
+                        if (code >= 65 && code <= 90) return String.fromCharCode(((code - 65 + 3) % 26) + 65);
+                        if (code >= 97 && code <= 122) return String.fromCharCode(((code - 97 + 3) % 26) + 97);
+                        return char;
+                    }).join(''),
+                    decrypt: (msg) => msg.split('').map(char => {
+                        const code = char.charCodeAt(0);
+                        if (code >= 65 && code <= 90) return String.fromCharCode(((code - 65 - 3 + 26) % 26) + 65);
+                        if (code >= 97 && code <= 122) return String.fromCharCode(((code - 97 - 3 + 26) % 26) + 97);
+                        return char;
+                    }).join('')
+                },
+                // A simple reversal cipher
+                encC: {
+                    encrypt: (msg) => msg.split('').reverse().join(''),
+                    decrypt: (msg) => msg.split('').reverse().join('')
+                },
+                // Strong AES-256 encryption
+                encD: {
+                    encrypt: (msg) => {
+                        const key = CryptoJS.enc.Utf8.parse('mySecretKey123456789012345678901234'); // 32 bytes for AES-256
+                        const iv = CryptoJS.lib.WordArray.random(16);
+                        const encrypted = CryptoJS.AES.encrypt(msg, key, { iv: iv });
+                        return iv.toString() + ':' + encrypted.toString();
+                    },
+                    decrypt: (msg) => {
+                        try {
+                            const key = CryptoJS.enc.Utf8.parse('mySecretKey123456789012345678901234');
+                            const parts = msg.split(':');
+                            const iv = CryptoJS.enc.Hex.parse(parts[0]);
+                            const encrypted = parts[1];
+                            const decrypted = CryptoJS.AES.decrypt(encrypted, key, { iv: iv });
+                            return decrypted.toString(CryptoJS.enc.Utf8);
+                        } catch (e) {
+                            return 'ERROR: Invalid AES format';
+                        }
+                    }
+                },
+                // Advanced word and character substitution
+                encE: {
+                    encrypt: (msg) => {
+                        let result = msg;
+                        // Word substitutions
+                        const wordSubs = {
+                            'the': 'zhe', 'and': 'xnd', 'for': 'f0r', 'are': 'xre', 'but': 'b7t',
+                            'not': 'n0t', 'you': 'y0u', 'all': 'xll', 'can': 'c4n', 'had': 'hxd',
+                            'her': 'h3r', 'was': 'w4s', 'one': '0ne', 'our': '0ur', 'out': '0ut',
+                            'day': 'd4y', 'get': 'g3t', 'has': 'h4s', 'him': 'h1m', 'his': 'h1s',
+                            'how': 'h0w', 'its': '1ts', 'may': 'm4y', 'new': 'n3w', 'now': 'n0w',
+                            'old': '0ld', 'see': 's3e', 'two': 't2o', 'way': 'w4y', 'who': 'wh0',
+                            'boy': 'b0y', 'did': 'd1d', 'has': 'h4s', 'let': 'l3t', 'put': 'p7t',
+                            'say': 's4y', 'she': 'sh3', 'too': 't00', 'use': 'us3'
+                        };
+                        for (const [word, sub] of Object.entries(wordSubs)) {
+                            result = result.replace(new RegExp(word, 'gi'), sub);
+                        }
+                        // Character substitutions for remaining letters
+                        result = result.replace(/[aeiou]/gi, (match) => {
+                            const subs = {'a':'@', 'e':'3', 'i':'1', 'o':'0', 'u':'ü'};
+                            return subs[match.toLowerCase()] || match;
+                        });
+                        return result;
+                    },
+                    decrypt: (msg) => {
+                        let result = msg;
+                        // Reverse character substitutions
+                        result = result.replace(/[@3ü01]/g, (match) => {
+                            const revSubs = {'@':'a', '3':'e', 'ü':'u', '0':'o', '1':'i'};
+                            return revSubs[match] || match;
+                        });
+                        // Reverse word substitutions
+                        const wordSubs = {
+                            'zhe': 'the', 'xnd': 'and', 'f0r': 'for', 'xre': 'are', 'b7t': 'but',
+                            'n0t': 'not', 'y0u': 'you', 'xll': 'all', 'c4n': 'can', 'hxd': 'had',
+                            'h3r': 'her', 'w4s': 'was', '0ne': 'one', '0ur': 'our', '0ut': 'out',
+                            'd4y': 'day', 'g3t': 'get', 'h4s': 'has', 'h1m': 'him', 'h1s': 'his',
+                            'h0w': 'how', '1ts': 'its', 'm4y': 'may', 'n3w': 'new', 'n0w': 'now',
+                            '0ld': 'old', 's3e': 'see', 't2o': 'two', 'w4y': 'way', 'wh0': 'who',
+                            'b0y': 'boy', 'd1d': 'did', 'h4s': 'has', 'l3t': 'let', 'p7t': 'put',
+                            's4y': 'say', 'sh3': 'she', 't00': 'too', 'us3': 'use'
+                        };
+                        for (const [sub, word] of Object.entries(wordSubs)) {
+                            result = result.replace(new RegExp(sub, 'gi'), word);
+                        }
+                        return result;
+                    }
+                },
+                // A simple base64-like encoding
+                encF: {
+                    encrypt: (msg) => btoa(msg),
+                    decrypt: (msg) => {
+                        try {
+                            return atob(msg);
+                        } catch (e) {
+                            return 'ERROR: Invalid base64 format';
+                        }
+                    }
+                }
+            };
+
+            // --- Tiny AI for Safety Check and Enigma Detection ---
+            async function loadTinyAI() {
+                // Simple model: classify based on keywords for safety
+                // For tiny size, use rule-based instead of full ML
+                return {
+                    predictSafety: (message) => {
+                        const sensitiveWords = ['secret', 'classified', 'enigma', 'attack', 'troops'];
+                        const score = sensitiveWords.reduce((acc, word) => acc + (message.toLowerCase().includes(word) ? 1 : 0), 0);
+                        return score < 2; // Safe if less than 2 sensitive words
+                    },
+                    detectEnigma: (message) => isEnigma(message)
+                };
+            }
+
+            let tinyAI;
+            loadTinyAI().then(ai => tinyAI = ai);
+
+            // Auth token (demo: hardcoded, in real app get from login)
+            let authToken = 'demo-token'; // Replace with actual token from login
+
+            // --- Simulated AI and Strength/Method Selection ---
+            function determineStrengthAndSelectAlgorithm(message) {
+                const length = message.length;
+                const complexity = new Set(message.toLowerCase().split('')).size;
+                let strength = 'Weak';
+                let method = 'encA';
+
+                if (length > 50 && complexity > 15) {
+                    strength = 'Very Strong';
+                    method = 'encD'; // ROT13
+                } else if (length > 30 && complexity > 10) {
+                    strength = 'Strong';
+                    method = 'encB'; // Caesar
+                } else if (length > 15 && complexity > 5) {
+                    strength = 'Moderate';
+                    method = 'encC'; // Reversal
+                } else if (length > 5) {
+                    strength = 'Fair';
+                    method = 'encE'; // Word Substitution
+                } else {
+                    strength = 'Weak';
+                    method = 'encA'; // Substitution
+                }
+
+                if (message.includes('URGENT')) {
+                    method = 'encF'; // Use Base64-like for urgent messages
+                }
+
+                return { strength, method };
+            }
+
+            // --- Enigma Simulation ---
+            // A simple pattern to "simulate" Enigma.
+            // A real Enigma cipher is much more complex, but this serves the app's purpose.
+            const enigmaPattern = /^[A-Z]{3} \d{4} [A-Z]{5} \d{2}\s/gi;
+            const enigmaCipher = "YHQ 1234 APLKJ 07\n\nQGZFK XTYQZ KDRGT UDFQZ RFGLJ BQZFG V"; // This is a pre-encoded message
+            const enigmaDecoded = "Our forces have intercepted a supply convoy near the channel.";
+
+            function isEnigma(message) {
+                return enigmaPattern.test(message);
+            }
+
+            // --- Core Encryption/Decryption Logic ---
+            function performEncryption(message, method) {
+                const encryptedMessage = encryptionMethods[method].encrypt(message);
+                const taggedMessage = `${method}_${encryptedMessage}`;
+                encryptedOutput.value = taggedMessage;
+            }
+
+            // --- Event Listeners ---
+            encryptBtn.addEventListener('click', async () => {
+                const message = messageInput.value.trim();
+                if (!message) {
+                    showStatus(encryptStatus, 'Message field cannot be empty.', 'text-red-400 bg-red-900');
+                    return;
+                }
+
+                if (!tinyAI) {
+                    showStatus(encryptStatus, 'AI model not loaded yet. Please wait.', 'text-yellow-400 bg-yellow-900');
+                    return;
+                }
+
+                // Use tiny AI to check safety and Enigma detection
+                const isSafe = tinyAI.predictSafety(message);
+                const isEnigmaMsg = tinyAI.detectEnigma(message);
+
+                if (isEnigmaMsg) {
+                    showStatus(encryptStatus, 'Enigma transmission detected locally. Sending to backend for full decryption.', 'text-yellow-400 bg-yellow-900');
+                    // Call backend analyze endpoint
+                    try {
+                const response = await fetch(`${backendURL}/analyze`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({ message })
+                });
+                        const data = await response.json();
+                        if (data.isEnigma) {
+                            showStatus(encryptStatus, 'Backend confirms Enigma transmission. Proceed with caution.', 'text-yellow-400 bg-yellow-900');
+                        }
+                    } catch (error) {
+                        showStatus(encryptStatus, 'Error contacting backend for Enigma analysis.', 'text-red-400 bg-red-900');
+                    }
+                }
+
+                const { strength, method } = determineStrengthAndSelectAlgorithm(message);
+
+                if (!isSafe) {
+                    showConfirmationModal(`Warning: The message may contain sensitive content. Encryption strength: "${strength}". Do you want to send this transmission anyway?`);
+
+                    // Store the message and method for the confirmation handler
+                    confirmSendBtn.onclick = () => {
+                        performEncryption(message, method);
+                        showStatus(encryptStatus, `Encryption successful. Strength: ${strength}. Method: ${method}.`, 'text-lime-400 bg-lime-900');
+                        hideConfirmationModal();
+                    };
+
+                } else {
+                    performEncryption(message, method);
+                    showStatus(encryptStatus, `Encryption successful. Strength: ${strength}. Method: ${method}.`, 'text-lime-400 bg-lime-900');
+                }
+            });
+
+            decryptBtn.addEventListener('click', () => {
+                const received = messageReceived.value.trim();
+                if (!received) {
+                    showStatus(decryptStatus, 'Received message field cannot be empty.', 'text-red-400 bg-red-900');
+                    return;
+                }
+
+                const [method, encodedMsg] = received.split('_');
+
+                if (encryptionMethods[method]) {
+                    const decrypted = encryptionMethods[method].decrypt(encodedMsg);
+                    decodedOutput.value = decrypted;
+                    showStatus(decryptStatus, `Decoding successful using method: ${method}.`, 'text-lime-400 bg-lime-900');
+                } else {
+                    decodedOutput.value = '';
+                    showStatus(decryptStatus, 'ERROR: Unknown encryption tag.', 'text-red-400 bg-red-900');
+                }
+            });
+
+            interceptBtn.addEventListener('click', () => {
+                const intercepted = interceptedMessage.value.trim();
+                if (!intercepted) {
+                    showStatus(interceptStatus, 'Intercepted message field cannot be empty.', 'text-red-400 bg-red-900');
+                    return;
+                }
+                
+                enigmaOutput.value = ''; // Clear previous output
+                
+                if (isEnigma(intercepted)) {
+                    showStatus(interceptStatus, 'Alert: Enigma transmission detected! Sending to backend for decryption...', 'text-yellow-400 bg-yellow-900');
+                    // Simulate "backend" decoding after a delay
+                    setTimeout(() => {
+                        enigmaOutput.value = enigmaDecoded;
+                        showStatus(interceptStatus, 'Decryption successful. Message declassified.', 'text-lime-400 bg-lime-900');
+                    }, 1500);
+                } else {
+                    showStatus(interceptStatus, 'No known enemy pattern detected. This may be a different cipher.', 'text-red-400 bg-red-900');
+                }
+            });
+            
+            cancelSendBtn.addEventListener('click', () => {
+                hideConfirmationModal();
+                showStatus(encryptStatus, 'Transmission canceled.', 'text-red-400 bg-red-900');
+            });
+
+            sendMessageBtn.addEventListener('click', () => {
+                const message = chatMessage.value.trim();
+                if (message && ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(message);
+                    chatMessage.value = '';
+                } else {
+                    alert('WebSocket not connected; Server (probably) not active.');
+                }
+            });
+
+
+            // --- Utility Functions ---
+            function showStatus(element, message, className) {
+                element.textContent = message;
+                element.className = `p-4 rounded-md text-sm text-center font-bold ${className}`;
+                element.style.display = 'block';
+                setTimeout(() => {
+                    element.style.display = 'none';
+                }, 5000);
+            }
+
+            function showConfirmationModal(message) {
+                modalMessage.textContent = message;
+                confirmationModal.style.display = 'flex';
+            }
+
+            function hideConfirmationModal() {
+                confirmationModal.style.display = 'none';
+            }
+
+            // Auto-select text in encrypted output on click
+            encryptedOutput.addEventListener('click', () => {
+                encryptedOutput.select();
+            });
+
+            // Pre-fill Enigma message for easy testing
+            interceptedMessage.value = enigmaCipher;
+        });
+    </script>
+</body>
+</html>
